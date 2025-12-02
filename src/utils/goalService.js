@@ -1,3 +1,4 @@
+import { scopedStorage } from './storageUtils'
 const STORAGE_KEY = 'saving_goals'
 const CURRENT_ID_KEY = 'current_goal_id'
 
@@ -10,14 +11,14 @@ const DEFAULT_GOALS = [
 
 // 1. Read: 获取所有目标
 export const getGoals = () => {
-    const stored = localStorage.getItem(STORAGE_KEY)
+    const stored = scopedStorage.getItem(STORAGE_KEY)
     return stored ? JSON.parse(stored) : DEFAULT_GOALS
 }
 
 // 2. Read: 获取当前选中的目标
 export const getCurrentGoal = () => {
     const goals = getGoals()
-    const currentId = parseInt(localStorage.getItem(CURRENT_ID_KEY) || '1')
+    const currentId = parseInt(scopedStorage.getItem(CURRENT_ID_KEY) || '1')
     return goals.find(g => g.id === currentId) || goals[0]
 }
 
@@ -27,16 +28,16 @@ export const addGoal = (name, price) => {
     const newGoal = { id: Date.now(), name, price: Number(price) }
     const newList = [...goals, newGoal]
 
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(newList))
+    scopedStorage.setItem(STORAGE_KEY, JSON.stringify(newList))
     // 新增后自动设为当前目标
-    localStorage.setItem(CURRENT_ID_KEY, newGoal.id)
+    scopedStorage.setItem(CURRENT_ID_KEY, newGoal.id)
 
     return { list: newList, current: newGoal }
 }
 
 // 4. Update: 切换当前目标
 export const setActiveGoal = (id) => {
-    localStorage.setItem(CURRENT_ID_KEY, id)
+    scopedStorage.setItem(CURRENT_ID_KEY, id)
     return getCurrentGoal()
 }
 
@@ -47,12 +48,12 @@ export const deleteGoal = (id) => {
     if (goals.length <= 1) return { success: false }
 
     const newList = goals.filter(g => g.id !== id)
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(newList))
+    scopedStorage.setItem(STORAGE_KEY, JSON.stringify(newList))
 
     // 如果删的是当前正选中的，重置为列表第一个
-    const currentId = parseInt(localStorage.getItem(CURRENT_ID_KEY))
+    const currentId = parseInt(scopedStorage.getItem(CURRENT_ID_KEY))
     if (currentId === id) {
-        localStorage.setItem(CURRENT_ID_KEY, newList[0].id)
+        scopedStorage.setItem(CURRENT_ID_KEY, newList[0].id)
     }
 
     return { success: true, list: newList, current: getCurrentGoal() }
