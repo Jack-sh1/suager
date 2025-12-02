@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react'
 import { Card, Button, Toast, Result } from 'antd-mobile'
-import { CheckCircleFill } from 'antd-mobile-icons'
 import { useNavigate } from 'react-router-dom'
 
 const Home = () => {
@@ -9,40 +8,73 @@ const Home = () => {
   const [streak, setStreak] = useState(0)
 
   useEffect(() => {
-    // (保持原有的 LocalStorage 读取逻辑不变)
-    const today = new Date().toISOString().split('T')[0]
-    const lastDate = localStorage.getItem('lastCheckDate')
-    const savedStreak = parseInt(localStorage.getItem('streak') || '0')
-    
-    if (lastDate === today) setIsChecked(true)
-    setStreak(savedStreak)
-    // 这里简化了断签逻辑演示，实际项目请保留之前的 checkStreakStatus
+    // 页面加载时，执行严谨的逻辑检查
+    const { currentStreak, isTodayChecked } = checkStreakLogic()
+    setStreak(currentStreak)
+    setIsChecked(isTodayChecked)
   }, [])
 
+  // 🧠 核心算法：计算连胜状态
+  const checkStreakLogic = () => {
+    const todayStr = new Date().toISOString().split('T')[0]
+    const lastDate = localStorage.getItem('lastCheckDate')
+    const savedStreak = parseInt(localStorage.getItem('streak') || '0')
+
+    // 计算昨天的日期
+    const yesterday = new Date()
+    yesterday.setDate(yesterday.getDate() - 1)
+    const yesterdayStr = yesterday.toISOString().split('T')[0]
+
+    let currentStreak = savedStreak
+    let isTodayChecked = false
+
+    if (lastDate === todayStr) {
+      // 情况A: 今天已经打过卡了
+      isTodayChecked = true
+    } else if (lastDate === yesterdayStr) {
+      // 情况B: 昨天打卡了，今天是新的一天，连胜保持
+      isTodayChecked = false
+    } else {
+      // 情况C: 断签了！(上次打卡不是昨天，也不是今天)
+      // 除非是第一次使用(无记录)，否则重置为0
+      if (lastDate) {
+        currentStreak = 0 
+        // 可选：这里可以把重置后的 0 存回去，或者等用户点打卡时再存
+        localStorage.setItem('streak', '0')
+      }
+      isTodayChecked = false
+    }
+    
+    return { currentStreak, isTodayChecked }
+  }
+
   const handleCheckIn = () => {
-    const today = new Date().toISOString().split('T')[0]
-    const newStreak = streak + 1
+    const todayStr = new Date().toISOString().split('T')[0]
+    
+    // 重新获取一下最新状态（防止边缘情况）
+    let { currentStreak } = checkStreakLogic()
+    const newStreak = currentStreak + 1
     
     setIsChecked(true)
     setStreak(newStreak)
-    localStorage.setItem('lastCheckDate', today)
+    
+    // 持久化存储
+    localStorage.setItem('lastCheckDate', todayStr)
     localStorage.setItem('streak', newStreak)
     
     Toast.show({
       icon: 'success',
-      content: '打卡成功！+20元',
+      content: `打卡成功！省下 ¥${20}`, // 即使反馈
     })
   }
 
   return (
     <div className="space-y-4 pt-4">
-      {/* 头部 */}
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-800 m-0">早安，戒糖人 ☀️</h1>
         <p className="text-gray-500 text-sm mt-1">坚持就是胜利，保持健康！</p>
       </div>
 
-      {/* 主卡片 */}
       <Card className="rounded-2xl shadow-sm border-none">
         <div className="text-center py-6">
           {isChecked ? (
@@ -73,7 +105,6 @@ const Home = () => {
         </div>
       </Card>
 
-      {/* 数据入口 */}
       <Card 
         className="rounded-xl active:bg-gray-50 transition-colors" 
         onClick={() => navigate('/achievement')}
