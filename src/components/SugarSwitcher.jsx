@@ -1,58 +1,114 @@
 import React, { useState } from 'react'
-import { SearchBar, Card, Tag, Empty } from 'antd-mobile'
-
-// 数据源跟随组件走，方便维护
-const SUGAR_DB = [
-  { id: 1, keyword: '奶茶', match: ['奶茶', '波霸', '珍奶'], replace: '无糖乌龙茶 + 鲜奶', save: '50g', color: 'success' },
-  { id: 2, keyword: '可乐', match: ['可乐', '快乐水', '雪碧'], replace: '零度可乐 / 气泡水', save: '35g', color: 'primary' },
-  { id: 3, keyword: '蛋糕', match: ['蛋糕', '甜点', '提拉米苏'], replace: '85% 黑巧克力', save: '40g', color: 'warning' },
-  { id: 4, keyword: '果汁', match: ['橙汁', '果汁'], replace: '新鲜水果 / 柠檬水', save: '20g', color: 'success' },
-]
+// 1. 补全引入：ErrorBlock 和 Icons
+import { SearchBar, Card, Tag, ErrorBlock } from 'antd-mobile'
+import { FireFill, CheckCircleFill } from 'antd-mobile-icons'
+import { SUGAR_DB } from '../data/sugar_db'
 
 const SugarSwitcher = () => {
   const [query, setQuery] = useState('')
+  
   const searchResult = SUGAR_DB.find(item => 
     item.match.some(m => m.includes(query)) || item.keyword.includes(query)
   )
 
-  return (
-    <div className="space-y-4">
-      {/* 搜索框 */}
-      <SearchBar 
-        placeholder="搜一下：奶茶、可乐..." 
-        value={query}
-        onChange={setQuery}
-        style={{ '--background': '#ffffff', '--border-radius': '100px' }}
-      />
+  // 2. 颜色辅助函数：让卡片颜色随结果变化
+  const getStyle = (type) => {
+    switch (type) {
+      case 'danger': return { color: '#ef4444', bg: '#fef2f2', border: '#ef4444' }
+      case 'warning': return { color: '#f59e0b', bg: '#fffbeb', border: '#f59e0b' }
+      case 'success': return { color: '#16a34a', bg: '#f0fdf4', border: '#16a34a' }
+      default: return { color: '#16a34a', bg: '#f0fdf4', border: '#16a34a' }
+    }
+  }
 
-      {/* 结果区 */}
+  const resultStyle = searchResult ? getStyle(searchResult.color) : {}
+
+  return (
+    <div className="space-y-4 px-1">
+      {/* 搜索框容器：加个阴影让它浮起来 */}
+      <div className="bg-white p-2 rounded-2xl shadow-sm border border-gray-100 sticky top-0 z-10">
+        <SearchBar 
+          placeholder="搜一下：奶茶、可乐..." 
+          value={query}
+          onChange={setQuery}
+          style={{ '--background': 'transparent' }}
+        />
+      </div>
+
       {query ? (
         searchResult ? (
-          <Card className="rounded-2xl border-l-4 border-green-500 animate-fade-in">
-            <div className="flex justify-between items-center mb-3">
-              <h3 className="text-lg font-bold text-green-800 m-0">✅ 推荐替代</h3>
-              <Tag color="success" fill="outline">健康选择</Tag>
+          // --- 搜索结果卡片 ---
+          <Card 
+            className="rounded-2xl shadow-md animate-fade-in"
+            style={{ 
+              backgroundColor: resultStyle.bg,
+              borderLeft: `6px solid ${resultStyle.border}`
+            }}
+          >
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-bold m-0 flex items-center gap-2" style={{ color: resultStyle.color }}>
+                {searchResult.color === 'success' ? <CheckCircleFill /> : '⚠️'} 
+                推荐替代
+              </h3>
+              <Tag color={searchResult.color} fill="outline">
+                {searchResult.color === 'success' ? '健康' : '更优'}选择
+              </Tag>
             </div>
-            <div className="text-xl font-medium mb-4 text-gray-700">{searchResult.replace}</div>
-            <div className="bg-green-50 p-3 rounded-lg text-green-700 text-sm flex items-center justify-between">
-              <span>⚡️ 帮你省下糖分</span>
+            
+            <div className="text-xl font-medium mb-4 text-gray-800">
+              {searchResult.replace}
+            </div>
+            
+            <div className="bg-white/60 p-3 rounded-lg text-sm flex items-center justify-between" style={{ color: resultStyle.color }}>
+              <span className="opacity-80">⚡️ 帮你省下糖分</span>
               <span className="font-bold text-lg">{searchResult.save}</span>
             </div>
           </Card>
         ) : (
-          <Empty description="暂无收录，建议喝白开水" />
+          // --- 空状态 (ErrorBlock) ---
+          <div className="bg-white p-8 rounded-2xl text-center shadow-sm mt-4">
+            <ErrorBlock 
+              status="empty" 
+              title="暂无收录" 
+              description={
+                <span className="text-gray-400">
+                  太生僻了，建议直接喝 <b className="text-blue-500">白开水</b> 保平安！
+                </span>
+              } 
+            />
+          </div>
         )
       ) : (
-        <div>
-          <div className="text-sm text-gray-400 mb-3">热门搜索</div>
-          <div className="flex flex-wrap gap-2">
-            {['奶茶', '可乐', '蛋糕'].map(tag => (
-              <Tag key={tag} round className="py-1 px-3" onClick={() => setQuery(tag)}>
-                {tag}
+        // --- 热门搜索卡片 ---
+        <Card 
+          title={
+            <div className="flex items-center gap-1 text-gray-700">
+              <FireFill className="text-orange-500 text-lg"/> 
+              <span className="font-bold">大家都在搜</span>
+            </div>
+          } 
+          className="rounded-2xl border-none shadow-sm"
+        >
+          <div className="flex flex-wrap gap-3">
+            {SUGAR_DB.slice(0, 8).map(item => (
+              <Tag 
+                key={item.id} 
+                fill="outline" 
+                color="default"
+                className="px-4 py-2 text-sm active:scale-95 transition-transform"
+                onClick={() => setQuery(item.keyword)}
+                style={{ 
+                  '--border-radius': '100px', 
+                  border: '1px solid #f3f4f6',
+                  backgroundColor: '#f9fafb',
+                  color: '#4b5563'
+                }}
+              >
+                {item.keyword}
               </Tag>
             ))}
           </div>
-        </div>
+        </Card>
       )}
     </div>
   )

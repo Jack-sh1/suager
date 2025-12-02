@@ -3,25 +3,30 @@ import { Card, ProgressBar } from 'antd-mobile'
 
 const Achievement = () => {
   const [stats, setStats] = useState({ streak: 0, savedMoney: 0 })
-  
-  // 💰 核心配置：也可以后续做成让用户自己设置
+
   const CONFIG = {
     goalName: 'SK-II 神仙水',
     goalPrice: 1540,
-    dailySave: 20 // 奶茶钱
+    dailySave: 20
   }
 
   useEffect(() => {
-    // 每次进入页面，实时读取 LocalStorage
-    // 因为 Home 页可能刚刚更新了 streak，这里必须重新读
+    // 1. 先读取连胜天数 (savedStreak 必须第一个定义)
     const savedStreak = parseInt(localStorage.getItem('streak') || '0')
+
+    // 2. 再读取罚金
+    const penalty = parseInt(localStorage.getItem('penalty') || '0')
+
+    // 3. 最后计算总金额 (这时候 savedStreak 已经有值了，不会报错)
+    const totalSaved = (savedStreak * CONFIG.dailySave) - penalty
+
+    // 4. 更新状态 (防止金额变成负数，最少显示0)
     setStats({
       streak: savedStreak,
-      savedMoney: savedStreak * CONFIG.dailySave
+      savedMoney: totalSaved > 0 ? totalSaved : 0
     })
   }, [])
 
-  // 计算百分比，最大不超过 100
   const progress = Math.min((stats.savedMoney / CONFIG.goalPrice) * 100, 100)
   const remainingDays = Math.ceil((CONFIG.goalPrice - stats.savedMoney) / CONFIG.dailySave)
 
@@ -44,12 +49,12 @@ const Achievement = () => {
           <span>进度 {progress.toFixed(0)}%</span>
           <span>¥{CONFIG.goalPrice}</span>
         </div>
-        <ProgressBar 
-          percent={progress} 
-          style={{ 
-            '--track-width': '12px', 
-            '--fill-color': progress >= 100 ? '#22c55e' : 'var(--adm-color-primary)' 
-          }} 
+        <ProgressBar
+          percent={progress}
+          style={{
+            '--track-width': '12px',
+            '--fill-color': progress >= 100 ? '#22c55e' : 'var(--adm-color-primary)'
+          }}
         />
         <div className="mt-3 text-right text-xs text-gray-400">
           {progress >= 100 ? (
@@ -60,20 +65,19 @@ const Achievement = () => {
         </div>
       </Card>
 
-      {/* 勋章墙逻辑：根据 streak 自动点亮 */}
+      {/* 勋章墙 */}
       <div className="grid grid-cols-3 gap-3">
         {[
           { day: 3, label: '3天萌新', icon: '🥉' },
           { day: 7, label: '7天入门', icon: '🥈' },
           { day: 21, label: '大神', icon: '🥇' },
         ].map((badge) => (
-          <div 
-            key={badge.day} 
-            className={`bg-white p-4 rounded-xl text-center transition-all duration-300 ${
-              stats.streak >= badge.day 
-                ? 'shadow-md scale-105 border border-yellow-200' 
+          <div
+            key={badge.day}
+            className={`bg-white p-4 rounded-xl text-center transition-all duration-300 ${stats.streak >= badge.day
+                ? 'shadow-md scale-105 border border-yellow-200'
                 : 'opacity-40 grayscale bg-gray-50'
-            }`}
+              }`}
           >
             <div className="text-3xl mb-1">{badge.icon}</div>
             <div className="text-xs text-gray-500">{badge.label}</div>
