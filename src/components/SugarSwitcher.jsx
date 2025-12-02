@@ -3,7 +3,6 @@ import { SearchBar, Card, Tag, ErrorBlock, FloatingBubble, Modal, Form, Input, T
 import { AddOutline, CheckCircleFill, FireFill } from 'antd-mobile-icons'
 // 引入刚才写的服务
 import { getFoods, addFood, updateFood, deleteFood } from '../utils/sugarService'
-import { STYLE_CONFIG } from '../data/styleConstants'
 
 const SugarSwitcher = () => {
   const [items, setItems] = useState([])
@@ -91,7 +90,15 @@ const SugarSwitcher = () => {
     item.match.some(m => m.includes(query)) || item.keyword.includes(query)
   )
 
-  const resultStyle = searchResult ? (STYLE_CONFIG[searchResult.color] || STYLE_CONFIG.default) : {}
+  const getStyle = (type) => {
+    switch (type) {
+      case 'danger': return { color: '#ef4444', bg: '#fef2f2', border: '#ef4444' }
+      case 'warning': return { color: '#f59e0b', bg: '#fffbeb', border: '#f59e0b' }
+      case 'success': return { color: '#16a34a', bg: '#f0fdf4', border: '#16a34a' }
+      default: return { color: '#16a34a', bg: '#f0fdf4', border: '#16a34a' }
+    }
+  }
+  const resultStyle = searchResult ? getStyle(searchResult.color) : {}
 
   return (
     <div className="space-y-4 px-1 pb-20">
