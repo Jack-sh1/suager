@@ -1,5 +1,4 @@
-import React from 'react'
-import { BrowserRouter, Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom'
+import { HashRouter, rowserRouter, Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom'
 import { TabBar } from 'antd-mobile'
 import { CalendarOutline, SearchOutline, HistogramOutline } from 'antd-mobile-icons'
 import Home from './pages/Home'
@@ -49,7 +48,7 @@ const BottomNav = () => {
 function App() {
   return (
     <AuthProvider>
-      <BrowserRouter>
+      <HashRouter>
         <div className="min-h-screen bg-gray-50 pb-16 font-sans">
           {/* 页面内容区 */}
           <div className="max-w-md mx-auto">
@@ -82,7 +81,7 @@ function App() {
             <BottomNav />
           </div>
         </div>
-      </BrowserRouter>
+      </HashRouter>
     </AuthProvider>
   )
 }
