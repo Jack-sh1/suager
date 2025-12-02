@@ -1,55 +1,75 @@
-// 封装打卡的核心业务逻辑
-import { scopedStorage } from './storageUtils'
+import { getUserKey } from './authHelper'
+
+// 1. 核心写操作：执行打卡
 export const performCheckIn = (isRelapse, currentStreak) => {
     const todayStr = new Date().toISOString().split('T')[0]
-
-    // 1. 计算新的连胜天数
-    // 逻辑：无论是否破戒，只要记录了，我们都算坚持了一天（只是破戒会有金钱惩罚）
+    // 如果断签归零逻辑在 checkStreakLogic 里处理了，这里传入的 currentStreak 应该是正确的
     const newStreak = currentStreak + 1
 
-    // 2. 存基础状态
-    scopedStorage.setItem('lastCheckDate', todayStr)
-    scopedStorage.setItem('streak', newStreak)
-    scopedStorage.setItem('isRelapse', isRelapse)
+    // --- 写入基础状态 (带 UserKey) ---
+    localStorage.setItem(getUserKey('lastCheckDate'), todayStr)
+    localStorage.setItem(getUserKey('streak'), newStreak)
+    localStorage.setItem(getUserKey('isRelapse'), isRelapse)
 
-    // 3. 处理罚金逻辑 (Money Logic)
+    // --- 处理罚金 ---
     if (isRelapse) {
-        const currentPenalty = parseInt(scopedStorage.getItem('penalty') || '0')
-        // 惩罚机制：本来+20，现在-10，所以总共扣30
-        scopedStorage.setItem('penalty', currentPenalty + 30)
+        const currentPenalty = parseInt(localStorage.getItem(getUserKey('penalty')) || '0')
+        localStorage.setItem(getUserKey('penalty'), currentPenalty + 30)
     }
 
-    // 4. 处理热力图日志 (History Log Logic) - 这就是你刚才新增的部分
-    const historyLog = JSON.parse(scopedStorage.getItem('historyLog') || '{}')
+    // --- 写入日志 (用于热力图) ---
+    const historyLog = JSON.parse(localStorage.getItem(getUserKey('historyLog')) || '{}')
     historyLog[todayStr] = isRelapse ? 'relapse' : 'success'
-    scopedStorage.setItem('historyLog', JSON.stringify(historyLog))
+    localStorage.setItem(getUserKey('historyLog'), JSON.stringify(historyLog))
 
-    // 返回新的 streak 方便 UI 更新
     return newStreak
 }
 
-// 获取当前的连胜状态
+// 2. 核心读操作：获取原始数据 (给 Achievement 页用)
+export const getCheckInStats = () => {
+    return {
+        lastDate: localStorage.getItem(getUserKey('lastCheckDate')),
+        streak: parseInt(localStorage.getItem(getUserKey('streak')) || '0'),
+        isRelapse: localStorage.getItem(getUserKey('isRelapse')) === 'true',
+        penalty: parseInt(localStorage.getItem(getUserKey('penalty')) || '0'),
+        historyLog: JSON.parse(localStorage.getItem(getUserKey('historyLog')) || '{}')
+    }
+}
+
+// 3. 核心计算逻辑：判断断签 (给 Home 页用)
+// 这个函数负责判断：今天是打卡了？没打卡？还是断签了？
 export const checkStreakLogic = () => {
     const todayStr = new Date().toISOString().split('T')[0]
-    const lastDate = scopedStorage.getItem('lastCheckDate')
-    const savedStreak = parseInt(scopedStorage.getItem('streak') || '0')
-    const relapseStatus = scopedStorage.getItem('isRelapse') === 'true'
 
+    // 获取昨天日期
     const yesterday = new Date()
     yesterday.setDate(yesterday.getDate() - 1)
     const yesterdayStr = yesterday.toISOString().split('T')[0]
+
+    // 读取当前数据
+    const stats = getCheckInStats() // 复用上面的读取函数
+
+    const lastDate = stats.lastDate
+    const savedStreak = stats.streak
+    const relapseStatus = stats.isRelapse
 
     let currentStreak = savedStreak
     let isTodayChecked = false
     let todayRelapse = false
 
     if (lastDate === todayStr) {
+        // 情况A: 今天已打卡
         isTodayChecked = true
         todayRelapse = relapseStatus
     } else if (lastDate === yesterdayStr) {
+        // 情况B: 昨天打过卡，今天还没打 (连胜保持)
         isTodayChecked = false
     } else {
-        if (lastDate) currentStreak = 0
+        // 情况C: 断签了 (上次打卡是前天或更早)
+        // 除非是新用户(无记录)，否则重置连胜
+        if (lastDate) {
+            currentStreak = 0
+        }
         isTodayChecked = false
     }
 
