@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react'
 import { Toast, Dialog } from 'antd-mobile'
-// 引入新封装的组件
 import StatusCard from '../components/StatusCard'
 import StatsCard from '../components/StatsCard'
+
+// 1. 👇 在这里添加引入 (这一行是新的)
+import { performCheckIn, checkStreakLogic } from '../utils/checkInService'
 
 const Home = () => {
   const [isChecked, setIsChecked] = useState(false)
@@ -16,37 +18,17 @@ const Home = () => {
     setIsRelapse(todayRelapse)
   }, [])
 
-  // 🧠 逻辑核心：判断状态
-  const checkStreakLogic = () => {
-    const todayStr = new Date().toISOString().split('T')[0]
-    const lastDate = localStorage.getItem('lastCheckDate')
-    const savedStreak = parseInt(localStorage.getItem('streak') || '0')
-    const relapseStatus = localStorage.getItem('isRelapse') === 'true'
 
-    const yesterday = new Date()
-    yesterday.setDate(yesterday.getDate() - 1)
-    const yesterdayStr = yesterday.toISOString().split('T')[0]
-
-    let currentStreak = savedStreak
-    let isTodayChecked = false
-    let todayRelapse = false
-
-    if (lastDate === todayStr) {
-      isTodayChecked = true
-      todayRelapse = relapseStatus
-    } else if (lastDate === yesterdayStr) {
-      isTodayChecked = false
-    } else {
-      if (lastDate) currentStreak = 0
-      isTodayChecked = false
-    }
-
-    return { currentStreak, isTodayChecked, todayRelapse }
-  }
 
   // 🟢 正常打卡
   const handleCheckIn = () => {
-    updateState(false)
+    // 2. 👇 修改这里：直接调用 performCheckIn，不再调用 updateState
+    const newStreak = performCheckIn(false, streak)
+
+    setIsChecked(true)
+    setIsRelapse(false)
+    setStreak(newStreak)
+
     Toast.show({ icon: 'success', content: '打卡成功！+20元' })
   }
 
@@ -60,29 +42,20 @@ const Home = () => {
     })
 
     if (result) {
-      updateState(true)
+      // 3. 👇 修改这里：直接调用 performCheckIn
+      const newStreak = performCheckIn(true, streak)
+
+      setIsChecked(true)
+      setIsRelapse(true)
+      setStreak(newStreak)
+
       Toast.show({ icon: 'fail', content: '已记录，扣除10元' })
     }
   }
 
-  // 💾 数据持久化
-  const updateState = (relapse) => {
-    const todayStr = new Date().toISOString().split('T')[0]
-    const newStreak = streak + 1
-
-    setIsChecked(true)
-    setIsRelapse(relapse)
-    setStreak(newStreak)
-
-    localStorage.setItem('lastCheckDate', todayStr)
-    localStorage.setItem('streak', newStreak)
-    localStorage.setItem('isRelapse', relapse)
-
-    if (relapse) {
-      const currentPenalty = parseInt(localStorage.getItem('penalty') || '0')
-      localStorage.setItem('penalty', currentPenalty + 30)
-    }
-  }
+  // 4. ❌ 注意：原来的 const updateState = (...) 函数必须删掉！
+  // 因为它的逻辑已经移到了 src/utils/checkInService.js 里
+  // 所有的 LocalStorage 操作都在那个文件里完成了。
 
   return (
     <div className="space-y-4 pt-4">
@@ -93,7 +66,6 @@ const Home = () => {
         </p>
       </div>
 
-      {/* 状态卡片：负责交互 */}
       <StatusCard
         isChecked={isChecked}
         isRelapse={isRelapse}
@@ -101,7 +73,6 @@ const Home = () => {
         onRelapse={handleRelapse}
       />
 
-      {/* 数据卡片：负责展示 */}
       <StatsCard streak={streak} />
     </div>
   )
